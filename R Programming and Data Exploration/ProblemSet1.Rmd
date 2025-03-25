@@ -1,0 +1,225 @@
+---
+title: "Problem Set 1"
+author: "Jaime Song"
+output:
+  html_document:
+    df_print: paged
+  html_notebook: default
+---
+
+```{r setup, include=FALSE}
+
+
+library(knitr)
+
+# As long as you are working in a Rstudio Project file, you shouldn't need to 'hard code' directories like this 
+# change to your own working directory
+#knitr::opts_knit$set(root.dir = 'C:/Users/doosti/Desktop/MGSC_310')
+
+# set seed to your own favorite number
+set.seed(310)
+options(width=70)
+# if you want to prevent scientific format for numbers use this:
+options(scipen=99)
+
+# general rchunk code options
+opts_chunk$set(tidy.opts=list(width.wrap=50),tidy=FALSE, size = "vsmall")
+opts_chunk$set(message = FALSE,
+               warning = FALSE,
+               cache = TRUE,
+               autodep = TRUE,
+               cache.comments = FALSE,
+               collapse = TRUE,
+               fig.width = 5,  
+               fig.height = 4,
+               fig.align='center')
+
+```
+
+```{r setup_2}
+
+# load all your libraries here
+library('tidyverse')
+library('ggplot2')
+library(ISLR)
+
+# note, do not run install.packages() inside a code chunk. install them in the console outside of a code chunk. 
+
+```
+
+
+## Question 1
+
+1a) Response to part a. 
+
+```{r}
+getwd()
+
+```
+
+
+1b) Response to part b. 
+
+```{r}
+movies <- read.csv("datasets/IMDB_movies.csv")
+
+```
+
+1c) Response to part c.
+
+```{r}
+dim(movies)
+
+```
+
+1d) Response to part d. 
+
+```{r}
+names(movies)
+
+```
+1e) Response to part e. 
+
+```{r}
+movies %>% 
+  glimpse()
+movies %>% 
+  select_if(is.character) %>% 
+  glimpse()
+
+```
+
+1f) Response to part f.
+
+```{r}
+movies %>% slice(1:5)
+
+```
+1g) Response to part g.
+
+```{r}
+movies %>% 
+  arrange(-gross) %>% 
+  slice(1:10) 
+
+movies %>% 
+  select(director_name) %>% 
+  slice(1)
+```
+1h) Response to part h
+```{r}
+movies_sub <- movies %>% select(-facenumber_in_poster)
+
+dim(movies)
+dim(movies_sub)
+```
+
+1i) Response to part i
+```{r}
+movies %>% 
+  filter(content_rating == "PG-13") %>% 
+  count()
+
+# From what we learned in class
+movies %>% 
+  filter(content_rating == "PG-13") %>% 
+  summarize(mean_gross = mean(gross, na.rm = TRUE))
+
+# Another method I found online
+movies %>% 
+  filter(content_rating == "PG-13") %>% 
+  # pull: extracts column needed
+  pull(gross) %>%
+  mean(na.rm = TRUE)
+```
+
+## Question 2
+
+2a) Response to part a. 
+
+
+```{r}
+data(movies)
+ggplot(movies, aes(x = imdb_score, y = gross)) +
+  geom_point()
+
+
+```
+
+
+2b) Response to part b. 
+
+
+```{r}
+ggplot(movies, aes(x = imdb_score, y = gross)) +
+  geom_point(alpha = 0.1) 
+
+```
+
+2c) Response to part c. 
+
+
+```{r}
+movies <- movies %>% 
+  mutate(gross_M = gross/1000000)
+ggplot(movies, aes(x = imdb_score, y = gross_M)) +
+  geom_point(alpha = 0.1)
+
+```
+
+2d) Response to part d. 
+
+
+```{r}
+ggplot(movies, aes(x = imdb_score, y = gross_M)) +
+  geom_point(alpha = 0.1) +
+  geom_smooth()
+
+```
+
+2e) Response to part e. 
+
+
+```{r}
+movies %>% 
+  filter(director_name == "James Cameron") %>% 
+  ggplot(aes(x = imdb_score, y = gross_M)) +
+  geom_text(aes(label = movie_title), color = "blue")
+
+```
+
+2f) Response to part f. 
+
+
+```{r}
+movies %>% 
+  filter(director_name == "James Cameron") %>% 
+  ggplot(aes(x = imdb_score, y = gross_M)) +
+  geom_text(aes(label = movie_title), color = "blue") +
+  xlim(6, 10) + 
+  ylim(0, 800)
+
+```
+
+2g) Response to part g. 
+
+
+```{r}
+movies %>% 
+  filter(director_name == "James Cameron") %>% 
+  ggplot(aes(x = imdb_score, y = gross_M)) +
+  geom_text(aes(label = movie_title), color = "blue") +
+  xlim(5, 15) + ylim(0, 800) +
+  xlab("IMDB Score") + ylab("Gross Value (In millions of dollars)")
+
+```
+
+
+## Question 3
+
+2d) Is there a relationship between movie gross and IMDB Score?
+
+Yes, the higher the IMDB score, the higher the gross value.
+
+
+
