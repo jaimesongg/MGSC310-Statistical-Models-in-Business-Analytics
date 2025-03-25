@@ -1,0 +1,140 @@
+---
+title: "Problem Set 2"
+author: "Jaime Song"
+subtitle: MGSC 310 
+output:
+  html_document:
+    df_print: paged
+  html_notebook: default
+---
+
+```{r setup, include=FALSE}
+
+
+library(knitr)
+
+# As long as you are working in a Rstudio Project file, you shouldn't need to 'hard code' directories like this 
+# change to your own working directory
+#knitr::opts_knit$set(root.dir = 'C:/Users/doosti/Desktop/MGSC_310')
+
+# set seed to your own favorite number
+set.seed(310)
+options(width=70)
+# if you want to prevent scientific format for numbers use this:
+options(scipen=99)
+
+# general rchunk code options
+opts_chunk$set(tidy.opts=list(width.wrap=50),tidy=FALSE, size = "vsmall")
+opts_chunk$set(message = FALSE,
+               warning = FALSE,
+               cache = TRUE,
+               autodep = TRUE,
+               cache.comments = FALSE,
+               collapse = TRUE,
+               fig.width = 5,  
+               fig.height = 4,
+               fig.align='center')
+
+```
+
+```{r setup_2, include=FALSE}
+
+# load all your libraries here
+library(tidyverse)
+library(ISLR)
+library(rsample)
+library(caret)
+library(lindia)
+# note, do not run install.packages() inside a code chunk. install them in the console outside of a code chunk. 
+
+```
+
+
+## Question 1: Predicting Movie Revenue
+
+Part 1: Data Splitting
+
+```{r}
+data(movies)
+movies <- read_csv("datasets/IMDB_movies.csv")
+movies %>% glimpse()
+movies_clean <- 
+  movies %>% 
+  mutate(budgetM = budget/1000000,
+         grossM = gross/1000000,
+         profitM = grossM - budgetM,
+         ROI = profitM/budgetM,
+         genre_main = as.factor(unlist(map(strsplit(as.character(movies$genres),"\\|"),1))) %>% fct_lump(12),
+         rating_simple = fct_lump(content_rating, n = 6)
+         ) %>%
+  filter(budget < 400000000, 
+         content_rating != "", 
+         content_rating != "Not Rated",
+         language == "English") %>% 
+  mutate(rating_simple = rating_simple %>% fct_drop()) %>% 
+  rename(director = director_name, 
+         title = movie_title,
+         year = title_year) %>% 
+  select(-c(actor_1_name, actor_2_name,actor_1_facebook_likes, actor_2_facebook_likes, 
+         budget, gross, aspect_ratio, num_voted_users,num_user_for_reviews)) %>% 
+  relocate(title, year, country, director, budgetM, grossM, profitM, ROI, imdb_score, genre_main, rating_simple, language, duration)
+
+set.seed(310)
+movies_split <- initial_split(movies_clean, prop = 0.80)
+movies_train <- training(movies_split)
+movies_test <- testing(movies_split)
+
+```
+
+
+Part 2: Linear Regression
+
+```{r}
+movies_train$rating_simple <- relevel(movies_train$rating_simple, ref = "R")
+model1 <- lm(grossM ~ imdb_score + budgetM + rating_simple, movies_train)
+summary(model1)
+
+# The Multiple R-squared is 0.4878, meaning about 48.78% of the variance in grossM is explained by the predictors (imdb_score, budgetM, and rating_simple)
+
+# The Adjusted R-squared is 0.4866, which is slighly lower but still close, indicating that the adding predictors has improved the model without overfitting
+```
+
+Part 3: Interpretation
+
+BudgetM Coefficient Interpretation:
+The coefficient for budgetM is 0.97327 meaning that for each additional million dollars spent on a movie, the expected gross revenue increases by $0.97 million on average. Spending more does not necessarily mean greater net profit. A higher budget correlates with higher revenue but it does not account for costs. For example, if a movie spends an extra $10 million, it is expected to earn about $9.73 million more in revenue, which is a negative return on investment. Therefore, higher spending does not always guarantee higher net profit.
+
+
+Rating Interpretation:
+The coefficient for rating_simpleG is 33.75 meaning that on average G-rated movies earn $33.75 million more in revenue than R-rated movies, assuming all other factors are the same. This suggests that G-rated movies tend to have a broader audience appeal, leading to higher box office revenues compared to R-rated movies, which have a restricted audience. 
+
+P-value Explanation:
+The p-value for imdb_score is < 0.0000000000000002 which is extremely small. A p-value measures the probability of observing a relationship this strong between imdb_score and revenue purely by chance, assuming there is actually no true relationship. A very small p-value (< 0.05) means we have strong evidence to reject the null hypothesis. Since the p-value is so small, we can conclude with high confidence that imdb_score has a statistically significant positive relationship with revenue. Therefore, higher IMDb scores are strongly associated with higher box office earnings. 
+
+
+Part 4: Prediction and Evaluation
+
+
+```{r}
+grossM_train <- predict(model1, newdata = movies_train)
+RMSE(grossM_train, movies_train$grossM)
+
+grossM_test <- predict(model1, newdata = movies_test)
+RMSE(grossM_test, movies_test$grossM)
+
+results_test <- data.frame(
+  preds = grossM_test,
+  actual = movies_test$grossM
+)
+
+# create a scatter plot for actual vs predicted
+ggplot(results_test, aes(x = actual, y = preds)) +
+  geom_point() +
+  xlab("Actual GrossM") +
+  ylab("Predicted GrossM")
+```
+
+
+Part 5: Reflection
+
+One specific limitation of the model is that it does not account for marketing and distribution factors, which can have a major impact on a movie's revenue. A movie with a moderate budget but strong marketing might outperform a high-budget film with poor promotion. One way to improve this model could be to integatre the variable movie_facebook_likes to understand how audience anticipation correlates with box office performance. 
